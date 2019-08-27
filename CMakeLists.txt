@@ -1,6 +1,6 @@
 esma_set_this ()
 
-set (SRCS
+list( APPEND MOM6_SRCS
    src/ALE/MOM_ALE.F90
    src/ALE/MOM_regridding.F90
    src/ALE/MOM_remapping.F90
@@ -60,37 +60,6 @@ set (SRCS
    src/equation_of_state/MOM_EOS_Wright.F90
    src/equation_of_state/MOM_EOS_linear.F90
    src/equation_of_state/MOM_TFreeze.F90
-   src/equation_of_state/TEOS10/gsw_chem_potential_water_t_exact.f90
-   src/equation_of_state/TEOS10/gsw_ct_freezing_exact.f90
-   src/equation_of_state/TEOS10/gsw_ct_freezing_poly.f90
-   src/equation_of_state/TEOS10/gsw_ct_from_pt.f90
-   src/equation_of_state/TEOS10/gsw_ct_from_t.f90
-   src/equation_of_state/TEOS10/gsw_entropy_part.f90
-   src/equation_of_state/TEOS10/gsw_entropy_part_zerop.f90
-   src/equation_of_state/TEOS10/gsw_gibbs.f90
-   src/equation_of_state/TEOS10/gsw_gibbs_ice.f90
-   src/equation_of_state/TEOS10/gsw_gibbs_pt0_pt0.f90
-   src/equation_of_state/TEOS10/gsw_mod_freezing_poly_coefficients.f90
-   src/equation_of_state/TEOS10/gsw_mod_gibbs_ice_coefficients.f90
-   src/equation_of_state/TEOS10/gsw_mod_kinds.f90
-   src/equation_of_state/TEOS10/gsw_mod_specvol_coefficients.f90
-   src/equation_of_state/TEOS10/gsw_mod_teos10_constants.f90
-   src/equation_of_state/TEOS10/gsw_mod_toolbox.f90
-   src/equation_of_state/TEOS10/gsw_pt0_from_t.f90
-   src/equation_of_state/TEOS10/gsw_pt_from_ct.f90
-   src/equation_of_state/TEOS10/gsw_pt_from_t.f90
-   src/equation_of_state/TEOS10/gsw_rho.f90
-   src/equation_of_state/TEOS10/gsw_rho_first_derivatives.f90
-   src/equation_of_state/TEOS10/gsw_rho_second_derivatives.f90
-   src/equation_of_state/TEOS10/gsw_sp_from_sr.f90
-   src/equation_of_state/TEOS10/gsw_specvol.f90
-   src/equation_of_state/TEOS10/gsw_specvol_first_derivatives.f90
-   src/equation_of_state/TEOS10/gsw_specvol_second_derivatives.f90
-   src/equation_of_state/TEOS10/gsw_sr_from_sp.f90
-   src/equation_of_state/TEOS10/gsw_t_deriv_chem_potential_water_t_exact.f90
-   src/equation_of_state/TEOS10/gsw_t_freezing_exact.f90
-   src/equation_of_state/TEOS10/gsw_t_freezing_poly.f90
-   src/equation_of_state/TEOS10/gsw_t_from_ct.f90
    src/framework/MOM_checksums.F90
    src/framework/MOM_coms.F90
    src/framework/MOM_constants.F90
@@ -237,204 +206,19 @@ set (SRCS
    pkg/CVMix-src/src/shared/cvmix_tidal.F90
    pkg/CVMix-src/src/shared/cvmix_utils.F90
    pkg/geoKdTree/kdtree.f90
-   pkg/GSW-Fortran/modules/gsw_mod_baltic_data.f90
-   pkg/GSW-Fortran/modules/gsw_mod_error_functions.f90
-   pkg/GSW-Fortran/modules/gsw_mod_freezing_poly_coefficients.f90
-   pkg/GSW-Fortran/modules/gsw_mod_gibbs_ice_coefficients.f90
-   pkg/GSW-Fortran/modules/gsw_mod_kinds.f90
-   pkg/GSW-Fortran/modules/gsw_mod_netcdf.f90
-   pkg/GSW-Fortran/modules/gsw_mod_saar_data.f90
-   pkg/GSW-Fortran/modules/gsw_mod_sp_coefficients.f90
-   pkg/GSW-Fortran/modules/gsw_mod_specvol_coefficients.f90
-   pkg/GSW-Fortran/modules/gsw_mod_teos10_constants.f90
-   pkg/GSW-Fortran/modules/gsw_mod_toolbox.f90
-   pkg/GSW-Fortran/test/gsw_check_functions.f90
-   pkg/GSW-Fortran/test/gsw_poly_check.f90
-   pkg/GSW-Fortran/toolbox/gsw_add_barrier.f90
-   pkg/GSW-Fortran/toolbox/gsw_add_mean.f90
-   pkg/GSW-Fortran/toolbox/gsw_adiabatic_lapse_rate_from_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_adiabatic_lapse_rate_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_alpha.f90
-   pkg/GSW-Fortran/toolbox/gsw_alpha_on_beta.f90
-   pkg/GSW-Fortran/toolbox/gsw_alpha_wrt_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_alpha_wrt_t_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_beta.f90
-   pkg/GSW-Fortran/toolbox/gsw_beta_const_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_c_from_sp.f90
-   pkg/GSW-Fortran/toolbox/gsw_cabbeling.f90
-   pkg/GSW-Fortran/toolbox/gsw_chem_potential_water_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_chem_potential_water_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_cp_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_first_derivatives_wrt_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_freezing.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_freezing_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_freezing_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_freezing_first_derivatives_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_freezing_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_enthalpy_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_entropy.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_pt.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_rho.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_from_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_maxdensity.f90
-   pkg/GSW-Fortran/toolbox/gsw_ct_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_deltasa_atlas.f90
-   pkg/GSW-Fortran/toolbox/gsw_deltasa_from_sp.f90
-   pkg/GSW-Fortran/toolbox/gsw_dilution_coefficient_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_dynamic_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_ct_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_diff.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_first_derivatives_ct_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_second_derivatives_ct_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_sso_0.f90
-   pkg/GSW-Fortran/toolbox/gsw_enthalpy_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_from_pt.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_from_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_part.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_part_zerop.f90
-   pkg/GSW-Fortran/toolbox/gsw_entropy_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_fdelta.f90
-   pkg/GSW-Fortran/toolbox/gsw_frazil_properties.f90
-   pkg/GSW-Fortran/toolbox/gsw_frazil_properties_potential.f90
-   pkg/GSW-Fortran/toolbox/gsw_frazil_properties_potential_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_frazil_ratios_adiabatic.f90
-   pkg/GSW-Fortran/toolbox/gsw_frazil_ratios_adiabatic_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_geo_strf_dyn_height.f90
-   pkg/GSW-Fortran/toolbox/gsw_geo_strf_dyn_height_pc.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs_ice_part_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs_ice_pt0.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs_ice_pt0_pt0.f90
-   pkg/GSW-Fortran/toolbox/gsw_gibbs_pt0_pt0.f90
-   pkg/GSW-Fortran/toolbox/gsw_grav.f90
-   pkg/GSW-Fortran/toolbox/gsw_helmholtz_energy_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_hill_ratio_at_sp2.f90
-   pkg/GSW-Fortran/toolbox/gsw_ice_fraction_to_freeze_seawater.f90
-   pkg/GSW-Fortran/toolbox/gsw_internal_energy.f90
-   pkg/GSW-Fortran/toolbox/gsw_internal_energy_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_kappa.f90
-   pkg/GSW-Fortran/toolbox/gsw_ipv_vs_fnsquared_ratio.f90
-   pkg/GSW-Fortran/toolbox/gsw_kappa_const_t_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_kappa_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_kappa_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_latentheat_evap_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_latentheat_evap_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_latentheat_melting.f90
-   pkg/GSW-Fortran/toolbox/gsw_linear_interp_sa_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_ice_equilibrium_sa_ct_ratio.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_ice_equilibrium_sa_ct_ratio_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_ice_into_seawater.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_ice_sa_ct_ratio.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_ice_sa_ct_ratio_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_seaice_equilibrium_sa_ct_ratio.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_seaice_equilibrium_sa_ct_ratio_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_seaice_into_seawater.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_seaice_sa_ct_ratio.f90
-   pkg/GSW-Fortran/toolbox/gsw_melting_seaice_sa_ct_ratio_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_nsquared.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_from_pt_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_from_pt_ice_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_ice_freezing.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_ice_freezing_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_ice_freezing_first_derivatives_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_enthalpy_ice_freezing_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_pot_rho_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_pressure_coefficient_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_pressure_freezing_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt0_cold_ice_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt0_from_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt0_from_t_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_entropy.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_pot_enthalpy_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_pot_enthalpy_ice_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_pot_enthalpy_ice_poly_dh.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_from_t_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_pt_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_alpha_beta.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_first_derivatives_wrt_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_second_derivatives_wrt_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_rho_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_rr68_interp_sa_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_freezing_estimate.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_freezing_from_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_freezing_from_ct_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_freezing_from_t.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_freezing_from_t_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_from_rho.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_from_sp.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_from_sp_baltic.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_from_sstar.f90
-   pkg/GSW-Fortran/toolbox/gsw_sa_p_inrange.f90
-   pkg/GSW-Fortran/toolbox/gsw_saar.f90
-   pkg/GSW-Fortran/toolbox/gsw_saar_init.f90
-   pkg/GSW-Fortran/toolbox/gsw_seaice_fraction_to_freeze_seawater.f90
-   pkg/GSW-Fortran/toolbox/gsw_sigma0.f90
-   pkg/GSW-Fortran/toolbox/gsw_sigma1.f90
-   pkg/GSW-Fortran/toolbox/gsw_sigma2.f90
-   pkg/GSW-Fortran/toolbox/gsw_sigma3.f90
-   pkg/GSW-Fortran/toolbox/gsw_sigma4.f90
-   pkg/GSW-Fortran/toolbox/gsw_sound_speed.f90
-   pkg/GSW-Fortran/toolbox/gsw_sound_speed_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_sound_speed_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_c.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_sa.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_sk.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_sa_baltic.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_sr.f90
-   pkg/GSW-Fortran/toolbox/gsw_sp_from_sstar.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_alpha_beta.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_anom_standard.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_first_derivatives_wrt_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_second_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_second_derivatives_wrt_enthalpy.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_sso_0.f90
-   pkg/GSW-Fortran/toolbox/gsw_specvol_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_spiciness0.f90
-   pkg/GSW-Fortran/toolbox/gsw_spiciness1.f90
-   pkg/GSW-Fortran/toolbox/gsw_spiciness2.f90
-   pkg/GSW-Fortran/toolbox/gsw_sr_from_sp.f90
-   pkg/GSW-Fortran/toolbox/gsw_sstar_from_sa.f90
-   pkg/GSW-Fortran/toolbox/gsw_sstar_from_sp.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_deriv_chem_potential_water_t_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_freezing.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_freezing_exact.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_freezing_first_derivatives.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_freezing_first_derivatives_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_freezing_poly.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_from_ct.f90
-   pkg/GSW-Fortran/toolbox/gsw_t_from_pt0_ice.f90
-   pkg/GSW-Fortran/toolbox/gsw_thermobaric.f90
-   pkg/GSW-Fortran/toolbox/gsw_turner_rsubrho.f90
-   pkg/GSW-Fortran/toolbox/gsw_util_indx.f90
-   pkg/GSW-Fortran/toolbox/gsw_util_interp1q_int.f90
-   pkg/GSW-Fortran/toolbox/gsw_util_sort_real.f90
-   pkg/GSW-Fortran/toolbox/gsw_util_xinterp1.f90
-   pkg/GSW-Fortran/toolbox/gsw_z_from_p.f90
+   pkg/MOM6_DA_hooks/src/core/ocean_da_core.F90
+   pkg/MOM6_DA_hooks/src/core/ocean_da_types.F90
+   pkg/MOM6_DA_hooks/src/core/write_ocean_obs.F90
 )
 
+list( APPEND MOM6_SRCS
+   config_src/coupled_driver/MOM_surface_forcing.F90
+   config_src/coupled_driver/ocean_model_MOM.F90
+)
 
 esma_add_library (${this}
-  SRCS ${SRCS}
-  DEPENDENCIES GFDL_fms_r8
+  SRCS ${MOM6_SRCS}
+  DEPENDENCIES GFDL_fms_r8 gsw
   INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/config_src/dynamic ${CMAKE_CURRENT_SOURCE_DIR}/src/framework
 )
 

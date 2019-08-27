@@ -133,7 +133,7 @@ end type ocean_public_type
 !> The ocean_state_type contains all information about the state of the ocean,
 !! with a format that is private so it can be readily changed without disrupting
 !! other coupled components.
-type, public :: ocean_state_type ; private
+type, public :: ocean_state_type !; private
   ! This type is private, and can therefore vary between different ocean models.
   logical :: is_ocean_PE = .false.  !< True if this is an ocean PE.
   type(time_type) :: Time     !< The ocean model's time and master clock.
@@ -1053,6 +1053,15 @@ subroutine ocean_model_data2D_get(OS, Ocean, name, array2D, isc, jsc)
      array2D(isc:,jsc:) = Ocean%t_surf(isc:,jsc:)-CELSIUS_KELVIN_OFFSET
   case('btfHeat')
      array2D(isc:,jsc:) = 0
+  case('cos_rot')
+     array2D(isc:,jsc:) = OS%grid%cos_rot(g_isc:g_iec,g_jsc:g_jec) ! =1
+  case('sin_rot')
+     array2D(isc:,jsc:) = OS%grid%sin_rot(g_isc:g_iec,g_jsc:g_jec) ! =0
+! Santha A
+  case('s_surf')
+     array2D(isc:,jsc:) = Ocean%s_surf(isc:,jsc:)
+  case('sea_lev')
+     array2D(isc:,jsc:) = Ocean%sea_lev(isc:,jsc:)
   case default
      call MOM_error(FATAL,'get_ocean_grid_data2D: unknown argument name='//name)
   end select
