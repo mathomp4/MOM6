@@ -218,7 +218,7 @@ list( APPEND MOM6_SRCS
 
 esma_add_library (${this}
   SRCS ${MOM6_SRCS}
-  DEPENDENCIES GFDL_fms_r8 gsw
+  DEPENDENCIES fms_r8 gsw
   INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/config_src/dynamic ${CMAKE_CURRENT_SOURCE_DIR}/src/framework
 )
 
