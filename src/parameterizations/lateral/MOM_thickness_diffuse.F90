@@ -766,6 +766,10 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
 !$OMP                                  drdx,mag_grad2,Slope,slope2_Ratio_u,hN2_u,   &
 !$OMP                                  Sfn_unlim_u,drdi_u,drdkDe_u,h_harm,c2_h_u,   &
 !$OMP                                  Sfn_safe,Sfn_est,Sfn_in_h,calc_derivatives)
+
+Sfn_unlim_u = 0.
+Sfn_unlim_v = 0.
+
   do j=js,je
     do I=is-1,ie ; hN2_u(I,1) = 0. ; hN2_u(I,nz+1) = 0. ; enddo
     do K=nz,2,-1
