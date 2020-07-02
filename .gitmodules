@@ -7,3 +7,6 @@
 [submodule "pkg/geoKdTree"]
 	path = pkg/geoKdTree
 	url = https://github.com/travissluka/geoKdTree.git
+[submodule "pkg/GSW-Fortran"]
+	path = pkg/GSW-Fortran
+	url = https://github.com/TEOS-10/GSW-Fortran.git
