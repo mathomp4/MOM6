@@ -46,7 +46,7 @@ type, public :: update_OBC_CS ; private
   type(tidal_bay_OBC_CS), pointer :: tidal_bay_OBC_CSp => NULL()
   type(shelfwave_OBC_CS), pointer :: shelfwave_OBC_CSp => NULL()
   type(dyed_channel_OBC_CS), pointer :: dyed_channel_OBC_CSp => NULL()
-  !!@}
+  !>@}
 end type update_OBC_CS
 
 integer :: id_clock_pass !< A CPU time clock ID
@@ -146,7 +146,7 @@ subroutine update_OBC_data(OBC, G, GV, US, tv, h, CS, Time)
   if (CS%use_dyed_channel) &
       call dyed_channel_update_flow(OBC, CS%dyed_channel_OBC_CSp, G, Time)
   if (OBC%needs_IO_for_data)  &
-      call update_OBC_segment_data(G, GV, OBC, tv, h, Time)
+      call update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
 
 end subroutine update_OBC_data
 

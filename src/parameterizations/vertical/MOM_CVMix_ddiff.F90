@@ -44,7 +44,7 @@ type, public :: CVMix_ddiff_cs
   type(diag_ctrl), pointer :: diag => NULL() !< Pointer to diagnostics control structure
   !>@{ Diagnostics handles
   integer :: id_KT_extra = -1, id_KS_extra = -1, id_R_rho = -1
-  !!@}
+  !>@}
 
   ! Diagnostics arrays
 !  real, allocatable, dimension(:,:,:) :: KT_extra  !< Double diffusion diffusivity for temp [Z2 s-1 ~> m2 s-1]
@@ -138,15 +138,18 @@ logical function CVMix_ddiff_init(Time, G, GV, US, param_file, diag, CS)
   CS%diag => diag
 
   CS%id_KT_extra = register_diag_field('ocean_model','KT_extra',diag%axesTi,Time, &
-         'Double-diffusive diffusivity for temperature', 'm2 s-1', conversion=US%Z_to_m**2)
+         'Double-diffusive diffusivity for temperature', 'm2 s-1', conversion=US%Z2_T_to_m2_s)
 
   CS%id_KS_extra = register_diag_field('ocean_model','KS_extra',diag%axesTi,Time, &
-         'Double-diffusive diffusivity for salinity', 'm2 s-1', conversion=US%Z_to_m**2)
+         'Double-diffusive diffusivity for salinity', 'm2 s-1', conversion=US%Z2_T_to_m2_s)
 
   CS%id_R_rho = register_diag_field('ocean_model','R_rho',diag%axesTi,Time, &
          'Double-diffusion density ratio', 'nondim')
-  if (CS%id_R_rho > 0) &
-     allocate(CS%R_rho( SZI_(G), SZJ_(G), SZK_(G)+1)); CS%R_rho(:,:,:) = 0.0
+
+  if (CS%id_R_rho > 0) then
+     allocate(CS%R_rho( SZI_(G), SZJ_(G), SZK_(G)+1))
+     CS%R_rho(:,:,:) = 0.0
+  endif
 
   call cvmix_init_ddiff(strat_param_max=CS%strat_param_max,          &
                         kappa_ddiff_s=CS%kappa_ddiff_s,           &
@@ -170,22 +173,22 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS)
   real, dimension(SZI_(G),SZJ_(G),SZK_(G)),   intent(in)  :: h    !< Layer thickness [H ~> m or kg m-2].
   type(thermo_var_ptrs),                      intent(in)  :: tv   !< Thermodynamics structure.
   real, dimension(SZI_(G),SZJ_(G),SZK_(G)+1), intent(out) :: Kd_T !< Interface double diffusion diapycnal
-                                                                  !! diffusivity for temp [Z2 s-1 ~> m2 s-1].
+                                                                  !! diffusivity for temp [Z2 T-1 ~> m2 s-1].
   real, dimension(SZI_(G),SZJ_(G),SZK_(G)+1), intent(out) :: Kd_S !< Interface double diffusion diapycnal
-                                                                  !! diffusivity for salt [Z2 s-1 ~> m2 s-1].
+                                                                  !! diffusivity for salt [Z2 T-1 ~> m2 s-1].
   type(CVMix_ddiff_cs),                       pointer     :: CS   !< The control structure returned
                                                                   !! by a previous call to CVMix_ddiff_init.
   integer,                                    intent(in)  :: j    !< Meridional grid indice.
   ! Local variables
   real, dimension(SZK_(G)) :: &
     cellHeight, &  !< Height of cell centers [m]
-    dRho_dT,    &  !< partial derivatives of density wrt temp [kg m-3 degC-1]
-    dRho_dS,    &  !< partial derivatives of density wrt saln [kg m-3 ppt-1]
-    pres_int,   &  !< pressure at each interface [Pa]
+    dRho_dT,    &  !< partial derivatives of density wrt temp [R degC-1 ~> kg m-3 degC-1]
+    dRho_dS,    &  !< partial derivatives of density wrt saln [R ppt-1 ~> kg m-3 ppt-1]
+    pres_int,   &  !< pressure at each interface [R L2 T-2 ~> Pa]
     temp_int,   &  !< temp and at interfaces [degC]
     salt_int,   &  !< salt at at interfaces [ppt]
-    alpha_dT,   &  !< alpha*dT across interfaces
-    beta_dS,    &  !< beta*dS across interfaces
+    alpha_dT,   &  !< alpha*dT across interfaces [kg m-3]
+    beta_dS,    &  !< beta*dS across interfaces [kg m-3]
     dT,         &  !< temp. difference between adjacent layers [degC]
     dS             !< salt difference between adjacent layers [ppt]
   real, dimension(SZK_(G)+1) :: &
@@ -194,7 +197,7 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS)
 
   real, dimension(SZK_(G)+1) :: iFaceHeight !< Height of interfaces [m]
   integer :: kOBL                        !< level of OBL extent
-  real :: pref, g_o_rho0, rhok, rhokm1, dz, dh, hcorr
+  real :: dh, hcorr
   integer :: i, k
 
   ! initialize dummy variables
@@ -216,32 +219,29 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS)
     ! skip calling at land points
     if (G%mask2dT(i,j) == 0.) cycle
 
-    pRef = 0.
-    pres_int(1) = pRef
+    pres_int(1) = 0. ;  if (associated(tv%p_surf)) pres_int(1) = tv%p_surf(i,j)
     ! we don't have SST and SSS, so let's use values at top-most layer
-    temp_int(1) = TV%T(i,j,1); salt_int(1) = TV%S(i,j,1)
-    do k=2,G%ke
+    temp_int(1) = tv%T(i,j,1); salt_int(1) = tv%S(i,j,1)
+    do K=2,G%ke
       ! pressure at interface
-      pres_int(k) = pRef + GV%H_to_Pa * h(i,j,k-1)
+      pres_int(K) = pres_int(K-1) + (GV%g_Earth * GV%H_to_RZ) * h(i,j,k-1)
       ! temp and salt at interface
       ! for temp: (t1*h1 + t2*h2)/(h1+h2)
-      temp_int(k) = (TV%T(i,j,k-1)*h(i,j,k-1) + TV%T(i,j,k)*h(i,j,k))/(h(i,j,k-1)+h(i,j,k))
-      salt_int(k) = (TV%S(i,j,k-1)*h(i,j,k-1) + TV%S(i,j,k)*h(i,j,k))/(h(i,j,k-1)+h(i,j,k))
+      temp_int(K) = (tv%T(i,j,k-1)*h(i,j,k-1) + tv%T(i,j,k)*h(i,j,k)) / (h(i,j,k-1)+h(i,j,k))
+      salt_int(K) = (tv%S(i,j,k-1)*h(i,j,k-1) + tv%S(i,j,k)*h(i,j,k)) / (h(i,j,k-1)+h(i,j,k))
       ! dT and dS
-      dT(k) = (TV%T(i,j,k-1)-TV%T(i,j,k))
-      dS(k) = (TV%S(i,j,k-1)-TV%S(i,j,k))
-      pRef = pRef + GV%H_to_Pa * h(i,j,k-1)
+      dT(K) = (tv%T(i,j,k-1)-tv%T(i,j,k))
+      dS(K) = (tv%S(i,j,k-1)-tv%S(i,j,k))
     enddo ! k-loop finishes
 
-    call calculate_density_derivs(temp_int(:), salt_int(:), pres_int(:), drho_dT(:), drho_dS(:), 1, &
-                                  G%ke, TV%EQN_OF_STATE)
+    call calculate_density_derivs(temp_int, salt_int, pres_int, drho_dT, drho_dS, tv%eqn_of_state)
 
     ! The "-1.0" below is needed so that the following criteria is satisfied:
     ! if ((alpha_dT > beta_dS) .and. (beta_dS > 0.0)) then "salt finger"
     ! if ((alpha_dT < 0.) .and. (beta_dS < 0.) .and. (alpha_dT > beta_dS)) then "diffusive convection"
     do k=1,G%ke
-      alpha_dT(k) = -1.0*drho_dT(k) * dT(k)
-      beta_dS(k)  = drho_dS(k) * dS(k)
+      alpha_dT(k) = -1.0*US%R_to_kg_m3*drho_dT(k) * dT(k)
+      beta_dS(k)  = US%R_to_kg_m3*drho_dS(k) * dS(k)
     enddo
 
     if (CS%id_R_rho > 0.0)  then
@@ -275,8 +275,8 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS)
                             nlev=G%ke,    &
                             max_nlev=G%ke)
     do K=1,G%ke+1
-      Kd_T(i,j,K) = US%m_to_Z**2 * Kd1_T(K)
-      Kd_S(i,j,K) = US%m_to_Z**2 * Kd1_S(K)
+      Kd_T(i,j,K) = US%m2_s_to_Z2_T * Kd1_T(K)
+      Kd_S(i,j,K) = US%m2_s_to_Z2_T * Kd1_S(K)
     enddo
 
     ! Do not apply mixing due to convection within the boundary layer

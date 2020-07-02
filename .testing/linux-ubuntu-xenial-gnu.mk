@@ -24,7 +24,7 @@ LD = mpif90 $(MAIN_PROGRAM)
 DEBUG =              # If non-blank, perform a debug build (Cannot be
                      # mixed with REPRO or TEST)
 
-REPRO =              # If non-blank, erform a build that guarentees
+REPRO =              # If non-blank, perform a build that guarentees
                      # reprodicuibilty from run to run.  Cannot be used
                      # with DEBUG or TEST
 
@@ -53,6 +53,8 @@ SSE =                # The SSE options to be used to compile.  If blank,
                      # Current default is to use SSE2.
 
 COVERAGE =           # Add the code coverage compile options.
+
+INIT =               # Enable aggressive initialization
 
 # Need to use at least GNU Make version 3.81
 need := 3.81
@@ -88,12 +90,16 @@ FFLAGS := -fcray-pointer -fdefault-double-8 -fdefault-real-8 -Waliasing -ffree-l
 # Flags based on perforance target (production (OPT), reproduction (REPRO), or debug (DEBUG)
 FFLAGS_OPT = -O3
 FFLAGS_REPRO = -O2 -fbounds-check
-FFLAGS_DEBUG = -O0 -g -W -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
+FFLAGS_DEBUG = -O0 -g -W -Wno-compare-reals -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
+# Enable aggressive initialization
+ifdef INIT
+FFLAGS_DEBUG += -finit-real=snan -finit-integer=2147483647 -finit-derived
+endif
 
 # Flags to add additional build options
 FFLAGS_OPENMP = -fopenmp
 FFLAGS_VERBOSE =
-FFLAGS_COVERAGE =
+FFLAGS_COVERAGE = --coverage
 
 # Macro for C preprocessor
 CPPFLAGS = $(INCLUDES)
@@ -111,7 +117,7 @@ CFLAGS_DEBUG = -O0 -g
 # Flags to add additional build options
 CFLAGS_OPENMP = -fopenmp
 CFLAGS_VERBOSE =
-CFLAGS_COVERAGE =
+CFLAGS_COVERAGE = --coverage
 
 # Optional Testing compile flags.  Mutually exclusive from DEBUG, REPRO, and OPT
 # *_TEST will match the production if no new option(s) is(are) to be tested.
@@ -122,7 +128,7 @@ CFLAGS_TEST = $(CFLAGS_OPT)
 LDFLAGS :=
 LDFLAGS_OPENMP := -fopenmp
 LDFLAGS_VERBOSE :=
-LDFLAGS_COVERAGE :=
+LDFLAGS_COVERAGE := --coverage
 
 # Start with a blank LIBS
 LIBS =

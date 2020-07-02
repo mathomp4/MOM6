@@ -24,12 +24,12 @@ logical :: all_PEs_read = .false. !< If true, all PEs read the input files
                                   !! TODO: Eliminate this parameter
 
 !>@{ Default values for parameters
-logical, parameter :: report_unused_default = .false.
+logical, parameter :: report_unused_default = .true.
 logical, parameter :: unused_params_fatal_default = .false.
 logical, parameter :: log_to_stdout_default = .false.
 logical, parameter :: complete_doc_default = .true.
 logical, parameter :: minimal_doc_default = .true.
-!!@}
+!>@}
 
 !> The valid lines extracted from an input parameter file without comments
 type, private :: file_data_type ; private
@@ -1370,7 +1370,7 @@ end subroutine log_param_real
 
 !> Log the name and values of an array of real model parameter in documentation files.
 subroutine log_param_real_array(CS, modulename, varname, value, desc, &
-                                units, default)
+                                units, default, debuggingParam)
   type(param_file_type),      intent(in) :: CS      !< The control structure for the file_parser module,
                                          !! it is also a structure to parse for run-time parameters
   character(len=*),           intent(in) :: modulename !< The name of the calling module
@@ -1380,6 +1380,8 @@ subroutine log_param_real_array(CS, modulename, varname, value, desc, &
                                              !! present, this parameter is not written to a doc file
   character(len=*), optional, intent(in) :: units   !< The units of this parameter
   real,             optional, intent(in) :: default !< The default value of the parameter
+  logical,          optional, intent(in) :: debuggingParam !< If present and true, this parameter is
+                                         !! logged in the debugging parameter file
 
   character(len=1320) :: mesg
   character(len=240) :: myunits
@@ -1396,7 +1398,8 @@ subroutine log_param_real_array(CS, modulename, varname, value, desc, &
 
   myunits="not defined"; if (present(units)) write(myunits(1:240),'(A)') trim(units)
   if (present(desc)) &
-    call doc_param(CS%doc, varname, desc, myunits, value, default)
+    call doc_param(CS%doc, varname, desc, myunits, value, default, &
+                   debuggingParam=debuggingParam)
 
 end subroutine log_param_real_array
 
@@ -1553,8 +1556,7 @@ subroutine log_param_time(CS, modulename, varname, value, desc, units, &
         call doc_param(CS%doc, varname, desc, myunits, real_time)
       endif
     else
-      myunits='not defined'; if (present(units)) write(myunits(1:240),'(A)') trim(units)
-      call doc_param(CS%doc, varname, desc, myunits, value, default)
+      call doc_param(CS%doc, varname, desc, value, default, units=units)
     endif
   endif
 
@@ -1739,7 +1741,8 @@ end subroutine get_param_real
 !> This subroutine reads the values of an array of real model parameters from a parameter file
 !! and logs them in documentation files.
 subroutine get_param_real_array(CS, modulename, varname, value, desc, units, &
-               default, fail_if_missing, do_not_read, do_not_log, static_value, scale, unscaled)
+               default, fail_if_missing, do_not_read, do_not_log, debuggingParam, &
+               static_value, scale, unscaled)
   type(param_file_type),      intent(in)    :: CS      !< The control structure for the file_parser module,
                                          !! it is also a structure to parse for run-time parameters
   character(len=*),           intent(in)    :: modulename !< The name of the calling module
@@ -1759,6 +1762,8 @@ subroutine get_param_real_array(CS, modulename, varname, value, desc, units, &
                                          !! value for this parameter, although it might be logged.
   logical,          optional, intent(in)    :: do_not_log !< If present and true, do not log this
                                          !! parameter to the documentation files
+  logical,          optional, intent(in)    :: debuggingParam !< If present and true, this parameter is
+                                         !! logged in the debugging parameter file
   real,             optional, intent(in)    :: scale   !< A scaling factor that the parameter is
                                          !! multiplied by before it is returned.
   real, dimension(:), optional, intent(out) :: unscaled !< The value of the parameter that would be
@@ -1777,7 +1782,7 @@ subroutine get_param_real_array(CS, modulename, varname, value, desc, units, &
 
   if (do_log) then
     call log_param_real_array(CS, modulename, varname, value, desc, &
-                              units, default)
+                              units, default, debuggingParam)
   endif
 
   if (present(unscaled)) unscaled(:) = value(:)

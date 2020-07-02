@@ -30,8 +30,9 @@ use MOM_unit_scaling, only : unit_scale_type
 use user_initialization, only : user_initialize_topography
 use DOME_initialization, only : DOME_initialize_topography
 use ISOMIP_initialization, only : ISOMIP_initialize_topography
+use basin_builder, only : basin_builder_topography
 use benchmark_initialization, only : benchmark_initialize_topography
-use Neverland_initialization, only : Neverland_initialize_topography
+use Neverworld_initialization, only : Neverworld_initialize_topography
 use DOME2d_initialization, only : DOME2d_initialize_topography
 use Kelvin_initialization, only : Kelvin_initialize_topography
 use sloshing_initialization, only : sloshing_initialize_topography
@@ -78,7 +79,7 @@ subroutine MOM_initialize_fixed(G, US, OBC, PF, write_geom, output_dir)
   inputdir = slasher(inputdir)
 
   ! Set up the parameters of the physical domain (i.e. the grid), G
-  call set_grid_metrics(G, PF)
+  call set_grid_metrics(G, PF, US)
 
   ! Set up the bottom depth, G%bathyT either analytically or from file
   ! This also sets G%max_depth based on the input parameter MAXIMUM_DEPTH,
@@ -99,7 +100,7 @@ subroutine MOM_initialize_fixed(G, US, OBC, PF, write_geom, output_dir)
   call initialize_masks(G, PF, US)
 
   ! Make OBC mask consistent with land mask
-  call open_boundary_impose_land_mask(OBC, G, G%areaCu, G%areaCv)
+  call open_boundary_impose_land_mask(OBC, G, G%areaCu, G%areaCv, US)
 
   if (debug) then
     call hchksum(G%bathyT, 'MOM_initialize_fixed: depth ', G%HI, haloshift=1, scale=US%Z_to_m)
@@ -124,9 +125,9 @@ subroutine MOM_initialize_fixed(G, US, OBC, PF, write_geom, output_dir)
                  default="none")
   select case ( trim(config) )
     case ("none")
-    case ("list") ; call reset_face_lengths_list(G, PF)
-    case ("file") ; call reset_face_lengths_file(G, PF)
-    case ("global_1deg") ; call reset_face_lengths_named(G, PF, trim(config))
+    case ("list") ; call reset_face_lengths_list(G, PF, US)
+    case ("file") ; call reset_face_lengths_file(G, PF, US)
+    case ("global_1deg") ; call reset_face_lengths_named(G, PF, trim(config), US)
     case default ; call MOM_error(FATAL, "MOM_initialize_fixed: "// &
       "Unrecognized channel configuration "//trim(config))
   end select
@@ -152,14 +153,14 @@ subroutine MOM_initialize_fixed(G, US, OBC, PF, write_geom, output_dir)
   call MOM_calculate_grad_Coriolis(G%dF_dx, G%dF_dy, G, US=US)
   if (debug) then
     call qchksum(G%CoriolisBu, "MOM_initialize_fixed: f ", G%HI, scale=US%s_to_T)
-    call hchksum(G%dF_dx, "MOM_initialize_fixed: dF_dx ", G%HI, scale=US%s_to_T)
-    call hchksum(G%dF_dy, "MOM_initialize_fixed: dF_dy ", G%HI, scale=US%s_to_T)
+    call hchksum(G%dF_dx, "MOM_initialize_fixed: dF_dx ", G%HI, scale=US%m_to_L*US%s_to_T)
+    call hchksum(G%dF_dy, "MOM_initialize_fixed: dF_dy ", G%HI, scale=US%m_to_L*US%s_to_T)
   endif
 
   call initialize_grid_rotation_angle(G, PF)
 
 ! Compute global integrals of grid values for later use in scalar diagnostics !
-  call compute_global_grid_integrals(G)
+  call compute_global_grid_integrals(G, US=US)
 
 ! Write out all of the grid data used by this run.
   if (write_geom) call write_ocean_geometry_file(G, PF, output_dir, US=US)
@@ -201,8 +202,9 @@ subroutine MOM_initialize_topography(D, max_depth, G, PF, US)
                  " \t\t wall at the southern face. \n"//&
                  " \t halfpipe - a zonally uniform channel with a half-sine \n"//&
                  " \t\t profile in the meridional direction. \n"//&
+                 " \t bbuilder - build topography from list of functions. \n"//&
                  " \t benchmark - use the benchmark test case topography. \n"//&
-                 " \t Neverland - use the Neverland test case topography. \n"//&
+                 " \t Neverworld - use the Neverworld test case topography. \n"//&
                  " \t DOME - use a slope and channel configuration for the \n"//&
                  " \t\t DOME sill-overflow test case. \n"//&
                  " \t ISOMIP - use a slope and channel configuration for the \n"//&
@@ -226,8 +228,9 @@ subroutine MOM_initialize_topography(D, max_depth, G, PF, US)
     case ("halfpipe");  call initialize_topography_named(D, G, PF, config, max_depth, US)
     case ("DOME");      call DOME_initialize_topography(D, G, PF, max_depth, US)
     case ("ISOMIP");    call ISOMIP_initialize_topography(D, G, PF, max_depth, US)
+    case ("bbuilder");  call basin_builder_topography(D, G, PF, max_depth)
     case ("benchmark"); call benchmark_initialize_topography(D, G, PF, max_depth, US)
-    case ("Neverland"); call Neverland_initialize_topography(D, G, PF, max_depth)
+    case ("Neverworld","Neverland"); call Neverworld_initialize_topography(D, G, PF, max_depth)
     case ("DOME2D");    call DOME2d_initialize_topography(D, G, PF, max_depth)
     case ("Kelvin");    call Kelvin_initialize_topography(D, G, PF, max_depth, US)
     case ("sloshing");  call sloshing_initialize_topography(D, G, PF, max_depth)
