@@ -1067,6 +1067,8 @@ subroutine ocean_model_data2D_get(OS, Ocean, name, array2D, isc, jsc)
   case('melt_pot')
      if (allocated(OS%sfc_state%melt_potential)) then
         array2D(isc:,jsc:) = OS%sfc_state%melt_potential(isc:,jsc:)
+     else
+        call MOM_error(FATAL,'get_ocean_grid_data2D: melt_potential was not allocated')
      end if     
   case default
      call MOM_error(FATAL,'get_ocean_grid_data2D: unknown argument name='//name)
