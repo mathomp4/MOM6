@@ -81,7 +81,7 @@ subroutine hor_index_init(Domain, HI, param_file, local_indexing, index_offset)
 
   ! Read all relevant parameters and write them to the model log.
   call log_version(param_file, "MOM_hor_index", version, &
-                   "Sets the horizontal array index types.")
+                   "Sets the horizontal array index types.", all_default=.true.)
 
   HI%IscB = HI%isc ; HI%JscB = HI%jsc
   HI%IsdB = HI%isd ; HI%JsdB = HI%jsd
@@ -178,7 +178,7 @@ end subroutine rotate_hor_index
 !! - declaration of u-point data is of the form `u(HI%%IsdB:HI%%IedB,HI%%jsd:HI%%jed)`
 !! - declaration of v-point data is of the form `v(HI%%isd:HI%%ied,HI%%JsdB:HI%%JedB)`.
 !!
-!! For more detail explanation of horizontal indexing see \ref Horizontal_indexing.
+!! For more detail explanation of horizontal indexing see \ref Horizontal_Indexing.
 
 
 end module MOM_hor_index

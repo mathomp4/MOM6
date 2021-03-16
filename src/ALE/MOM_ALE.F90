@@ -22,7 +22,7 @@ use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
-use MOM_io,               only : create_file, write_field, close_file
+use MOM_io,               only : create_file, write_field, close_file, file_type
 use MOM_interface_heights,only : find_eta
 use MOM_open_boundary,    only : ocean_OBC_type, OBC_DIRECTION_E, OBC_DIRECTION_W
 use MOM_open_boundary,    only : OBC_DIRECTION_N, OBC_DIRECTION_S
@@ -52,6 +52,7 @@ use MOM_verticalGrid,     only : get_thickness_units, verticalGrid_type
 use regrid_consts,        only : coordinateUnits, coordinateMode, state_dependent
 use regrid_edge_values,   only : edge_values_implicit_h4
 use PLM_functions,        only : PLM_reconstruction, PLM_boundary_extrapolation
+use PLM_functions,        only : PLM_extrapolate_slope, PLM_monotonized_slope, PLM_slope_wa
 use PPM_functions,        only : PPM_reconstruction, PPM_boundary_extrapolation
 
 implicit none ; private
@@ -110,8 +111,9 @@ public ALE_offline_tracer_final
 public ALE_build_grid
 public ALE_regrid_accelerated
 public ALE_remap_scalar
-public pressure_gradient_plm
-public pressure_gradient_ppm
+public ALE_PLM_edge_values
+public TS_PLM_edge_values
+public TS_PPM_edge_values
 public adjustGridForIntegrity
 public ALE_initRegridding
 public ALE_getCoordinate
@@ -329,7 +331,7 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   type(ALE_CS),                               pointer       :: CS  !< Regridding parameters and options
   type(ocean_OBC_type),                       pointer       :: OBC !< Open boundary structure
   real,                             optional, intent(in)    :: dt  !< Time step between calls to ALE_main [T ~> s]
-  real, dimension(:,:),             optional, pointer       :: frac_shelf_h !< Fractional ice shelf coverage
+  real, dimension(SZI_(G),SZJ_(G)), optional, intent(in)       :: frac_shelf_h !< Fractional ice shelf coverage [nondim]
   ! Local variables
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: dzRegrid ! The change in grid interface positions
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: eta_preale
@@ -339,10 +341,7 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
 
   nk = GV%ke; isc = G%isc; iec = G%iec; jsc = G%jsc; jec = G%jec
 
-  ice_shelf = .false.
-  if (present(frac_shelf_h)) then
-    if (associated(frac_shelf_h)) ice_shelf = .true.
-  endif
+  ice_shelf = present(frac_shelf_h)
 
   if (CS%show_call_tree) call callTree_enter("ALE_main(), MOM_ALE.F90")
 
@@ -365,9 +364,9 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   ! Build new grid. The new grid is stored in h_new. The old grid is h.
   ! Both are needed for the subsequent remapping of variables.
   if (ice_shelf) then
-     call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h)
+    call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h)
   else
-     call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid)
+    call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid)
   endif
 
   call check_grid( G, GV, h, 0. )
@@ -481,7 +480,7 @@ subroutine ALE_offline_inputs(CS, G, GV, h, tv, Reg, uhtr, vhtr, Kd, debug, OBC)
   dzRegrid(:,:,:) = 0.0
   h_new(:,:,:) = 0.0
 
-  if (debug) call MOM_tracer_chkinv("Before ALE_offline_inputs", G, h, Reg%Tr, Reg%ntr)
+  if (debug) call MOM_tracer_chkinv("Before ALE_offline_inputs", G, GV, h, Reg%Tr, Reg%ntr)
 
   ! Build new grid from the Zstar state onto the requested vertical coordinate. The new grid is stored
   ! in h_new. The old grid is h. Both are needed for the subsequent remapping of variables. Convective
@@ -524,7 +523,7 @@ subroutine ALE_offline_inputs(CS, G, GV, h, tv, Reg, uhtr, vhtr, Kd, debug, OBC)
   call ALE_remap_scalar(CS%remapCS, G, GV, nk, h, tv%T, h_new, tv%T, answers_2018=CS%answers_2018)
   call ALE_remap_scalar(CS%remapCS, G, GV, nk, h, tv%S, h_new, tv%S, answers_2018=CS%answers_2018)
 
-  if (debug) call MOM_tracer_chkinv("After ALE_offline_inputs", G, h_new, Reg%Tr, Reg%ntr)
+  if (debug) call MOM_tracer_chkinv("After ALE_offline_inputs", G, GV, h_new, Reg%Tr, Reg%ntr)
 
   ! Copy over the new layer thicknesses
   do k = 1,nk  ; do j = jsc-1,jec+1 ; do i = isc-1,iec+1
@@ -619,7 +618,7 @@ subroutine ALE_build_grid( G, GV, regridCS, remapCS, h, tv, debug, frac_shelf_h 
   real, dimension(SZI_(G),SZJ_(G), SZK_(GV)), intent(inout) :: h     !< Current 3D grid obtained after the
                                                                      !! last time step [H ~> m or kg-2]
   logical,                       optional, intent(in)    :: debug    !< If true, show the call tree
-  real, dimension(:,:),          optional, pointer       :: frac_shelf_h !< Fractional ice shelf coverage
+  real, dimension(SZI_(G),SZJ_(G)),  optional, intent(in):: frac_shelf_h !< Fractional ice shelf coverage [nondim]
   ! Local variables
   integer :: nk, i, j, k
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)+1) :: dzRegrid ! The change in grid interface positions
@@ -629,17 +628,14 @@ subroutine ALE_build_grid( G, GV, regridCS, remapCS, h, tv, debug, frac_shelf_h 
   show_call_tree = .false.
   if (present(debug)) show_call_tree = debug
   if (show_call_tree) call callTree_enter("ALE_build_grid(), MOM_ALE.F90")
-  use_ice_shelf = .false.
-  if (present(frac_shelf_h)) then
-    if (associated(frac_shelf_h)) use_ice_shelf = .true.
-  endif
+  use_ice_shelf = present(frac_shelf_h)
 
   ! Build new grid. The new grid is stored in h_new. The old grid is h.
   ! Both are needed for the subsequent remapping of variables.
   if (use_ice_shelf) then
-     call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h )
+    call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h )
   else
-     call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid )
+    call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid )
   endif
 
   ! Override old grid with new one. The new grid 'h_new' is built in
@@ -1006,12 +1002,9 @@ subroutine ALE_remap_scalar(CS, G, GV, nk_src, h_src, s_src, h_dst, s_dst, all_c
 end subroutine ALE_remap_scalar
 
 
-!> Use plm reconstruction for pressure gradient (determine edge values)
-!! By using a PLM (limited piecewise linear method) reconstruction, this
-!! routine determines the edge values for the salinity and temperature
-!! within each layer. These edge values are returned and are used to compute
-!! the pressure gradient (by computing the densities).
-subroutine pressure_gradient_plm( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_extrap )
+!> Calculate edge values (top and bottom of layer) for T and S consistent with a PLM reconstruction
+!! in the vertical direction. Boundary reconstructions are PCM unless bdry_extrap is true.
+subroutine TS_PLM_edge_values( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_extrap )
   type(ocean_grid_type),   intent(in)    :: G    !< ocean grid structure
   type(verticalGrid_type), intent(in)    :: GV   !< Ocean vertical grid structure
   type(ALE_CS),            intent(inout) :: CS   !< module control structure
@@ -1029,12 +1022,31 @@ subroutine pressure_gradient_plm( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_ext
   logical,                 intent(in)    :: bdry_extrap !< If true, use high-order boundary
                                                  !! extrapolation within boundary cells
 
+  call ALE_PLM_edge_values( CS, G, GV, h, tv%S, bdry_extrap, S_t, S_b )
+  call ALE_PLM_edge_values( CS, G, GV, h, tv%T, bdry_extrap, T_t, T_b )
+
+end subroutine TS_PLM_edge_values
+
+!> Calculate edge values (top and bottom of layer) 3d scalar array.
+!! Boundary reconstructions are PCM unless bdry_extrap is true.
+subroutine ALE_PLM_edge_values( CS, G, GV, h, Q, bdry_extrap, Q_t, Q_b )
+  type(ALE_CS),            intent(in)    :: CS   !< module control structure
+  type(ocean_grid_type),   intent(in)    :: G    !< ocean grid structure
+  type(verticalGrid_type), intent(in)    :: GV   !< Ocean vertical grid structure
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)    :: h    !< layer thickness [H ~> m or kg m-2]
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)    :: Q    !< 3d scalar array
+  logical,                 intent(in)    :: bdry_extrap !< If true, use high-order boundary
+                                                 !! extrapolation within boundary cells
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(inout) :: Q_t  !< Scalar at the top edge of each layer
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(inout) :: Q_b  !< Scalar at the bottom edge of each layer
   ! Local variables
   integer :: i, j, k
-  real    :: hTmp(GV%ke)
-  real    :: tmp(GV%ke)
-  real, dimension(CS%nk,2) :: ppol_E     !Edge value of polynomial
-  real, dimension(CS%nk,2) :: ppol_coefs !Coefficients of polynomial
+  real :: slp(GV%ke)
+  real :: mslp
   real :: h_neglect
 
   if (.not.CS%answers_2018) then
@@ -1045,48 +1057,40 @@ subroutine pressure_gradient_plm( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_ext
     h_neglect = GV%kg_m2_to_H*1.0e-30
   endif
 
-  ! Determine reconstruction within each column
-  !$OMP parallel do default(shared) private(hTmp,ppol_E,ppol_coefs,tmp)
+  !$OMP parallel do default(shared) private(slp,mslp)
   do j = G%jsc-1,G%jec+1 ; do i = G%isc-1,G%iec+1
-    ! Build current grid
-    hTmp(:) = h(i,j,:)
-    tmp(:) = tv%S(i,j,:)
-    ! Reconstruct salinity profile
-    ppol_E(:,:) = 0.0
-    ppol_coefs(:,:) = 0.0
-    call PLM_reconstruction( GV%ke, hTmp, tmp, ppol_E, ppol_coefs, h_neglect )
-    if (bdry_extrap) &
-      call PLM_boundary_extrapolation( GV%ke, hTmp, tmp, ppol_E, ppol_coefs, h_neglect )
-
-    do k = 1,GV%ke
-      S_t(i,j,k) = ppol_E(k,1)
-      S_b(i,j,k) = ppol_E(k,2)
+    slp(1) = 0.
+    do k = 2, GV%ke-1
+      slp(k) = PLM_slope_wa(h(i,j,k-1), h(i,j,k), h(i,j,k+1), h_neglect, Q(i,j,k-1), Q(i,j,k), Q(i,j,k+1))
     enddo
+    slp(GV%ke) = 0.
 
-    ! Reconstruct temperature profile
-    ppol_E(:,:) = 0.0
-    ppol_coefs(:,:) = 0.0
-    tmp(:) = tv%T(i,j,:)
-    call PLM_reconstruction( GV%ke, hTmp, tmp, ppol_E, ppol_coefs, h_neglect )
-    if (bdry_extrap) &
-      call PLM_boundary_extrapolation( GV%ke, hTmp, tmp, ppol_E, ppol_coefs, h_neglect )
-
-    do k = 1,GV%ke
-      T_t(i,j,k) = ppol_E(k,1)
-      T_b(i,j,k) = ppol_E(k,2)
+    do k = 2, GV%ke-1
+      mslp = PLM_monotonized_slope(Q(i,j,k-1), Q(i,j,k), Q(i,j,k+1), slp(k-1), slp(k), slp(k+1))
+      Q_t(i,j,k) = Q(i,j,k) - 0.5 * mslp
+      Q_b(i,j,k) = Q(i,j,k) + 0.5 * mslp
     enddo
+    if (bdry_extrap) then
+      mslp = - PLM_extrapolate_slope(h(i,j,2), h(i,j,1), h_neglect, Q(i,j,2), Q(i,j,1))
+      Q_t(i,j,1) = Q(i,j,1) - 0.5 * mslp
+      Q_b(i,j,1) = Q(i,j,1) + 0.5 * mslp
+      mslp = PLM_extrapolate_slope(h(i,j,GV%ke-1), h(i,j,GV%ke), h_neglect, Q(i,j,GV%ke-1), Q(i,j,GV%ke))
+      Q_t(i,j,GV%ke) = Q(i,j,GV%ke) - 0.5 * mslp
+      Q_b(i,j,GV%ke) = Q(i,j,GV%ke) + 0.5 * mslp
+    else
+      Q_t(i,j,1) = Q(i,j,1)
+      Q_b(i,j,1) = Q(i,j,1)
+      Q_t(i,j,GV%ke) = Q(i,j,GV%ke)
+      Q_b(i,j,GV%ke) = Q(i,j,GV%ke)
+    endif
 
   enddo ; enddo
 
-end subroutine pressure_gradient_plm
+end subroutine ALE_PLM_edge_values
 
-
-!> Use ppm reconstruction for pressure gradient (determine edge values)
-!> By using a PPM (limited piecewise linear method) reconstruction, this
-!> routine determines the edge values for the salinity and temperature
-!> within each layer. These edge values are returned and are used to compute
-!> the pressure gradient (by computing the densities).
-subroutine pressure_gradient_ppm( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_extrap )
+!> Calculate edge values (top and bottom of layer) for T and S consistent with a PPM reconstruction
+!! in the vertical direction. Boundary reconstructions are PCM unless bdry_extrap is true.
+subroutine TS_PPM_edge_values( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_extrap )
   type(ocean_grid_type),   intent(in)    :: G    !< ocean grid structure
   type(verticalGrid_type), intent(in)    :: GV   !< Ocean vertical grid structure
   type(ALE_CS),            intent(inout) :: CS   !< module control structure
@@ -1168,7 +1172,7 @@ subroutine pressure_gradient_ppm( CS, S_t, S_b, T_t, T_b, G, GV, tv, h, bdry_ext
 
   enddo ; enddo
 
-end subroutine pressure_gradient_ppm
+end subroutine TS_PPM_edge_values
 
 
 !> Initializes regridding for the main ALE algorithm
@@ -1269,7 +1273,7 @@ subroutine ALE_writeCoordinateFile( CS, GV, directory )
   character(len=240) :: filepath
   type(vardesc)      :: vars(2)
   type(fieldtype)    :: fields(2)
-  integer            :: unit
+  type(file_type)    :: IO_handle ! The I/O handle of the fileset
   real               :: ds(GV%ke), dsi(GV%ke+1)
 
   filepath    = trim(directory) // trim("Vertical_coordinate")
@@ -1283,13 +1287,12 @@ subroutine ALE_writeCoordinateFile( CS, GV, directory )
   vars(2) = var_desc('ds_interface', getCoordinateUnits( CS%regridCS ), &
                     'Layer Center Coordinate Separation','1','i','1')
 
-  call create_file(unit, trim(filepath), vars, 2, fields, SINGLE_FILE, GV=GV)
-  call write_field(unit, fields(1), ds)
-  call write_field(unit, fields(2), dsi)
-  call close_file(unit)
+  call create_file(IO_handle, trim(filepath), vars, 2, fields, SINGLE_FILE, GV=GV)
+  call write_field(IO_handle, fields(1), ds)
+  call write_field(IO_handle, fields(2), dsi)
+  call close_file(IO_handle)
 
 end subroutine ALE_writeCoordinateFile
-
 
 !> Set h to coordinate values for fixed coordinate systems
 subroutine ALE_initThicknessToCoord( CS, G, GV, h )

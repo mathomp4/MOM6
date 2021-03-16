@@ -113,14 +113,14 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
   type(ocean_grid_type),                    intent(inout) :: G    !< Ocean grid.
   type(verticalGrid_type),                  intent(in)    :: GV   !< Ocean vertical grid structure.
   type(unit_scale_type),                    intent(in)    :: US   !< A dimensional unit scaling type
-  real, dimension(SZI_(G),SZJ_(G),SZK_(G)), intent(in)    :: h    !< Layer thickness [H ~> m or kg m-2].
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), intent(in)   :: h    !< Layer thickness [H ~> m or kg m-2].
   real, dimension(SZIB_(G),SZJ_(G)),        intent(in)    :: SN_u !< Eady growth rate at u-points [T-1 ~> s-1].
   real, dimension(SZI_(G),SZJB_(G)),        intent(in)    :: SN_v !< Eady growth rate at v-points [T-1 ~> s-1].
   type(vertvisc_type),                      intent(in)    :: visc !< The vertical viscosity type.
   real,                                     intent(in)    :: dt   !< Model(baroclinic) time-step [T ~> s].
   type(MEKE_CS),                            pointer       :: CS   !< MEKE control structure.
-  real, dimension(SZIB_(G),SZJ_(G),SZK_(G)), intent(in)   :: hu   !< Accumlated zonal mass flux [H L2 ~> m3 or kg].
-  real, dimension(SZI_(G),SZJB_(G),SZK_(G)), intent(in)   :: hv   !< Accumlated meridional mass flux [H L2 ~> m3 or kg]
+  real, dimension(SZIB_(G),SZJ_(G),SZK_(GV)), intent(in)  :: hu   !< Accumlated zonal mass flux [H L2 ~> m3 or kg]
+  real, dimension(SZI_(G),SZJB_(G),SZK_(GV)), intent(in)  :: hv   !< Accumlated meridional mass flux [H L2 ~> m3 or kg]
 
   ! Local variables
   real, dimension(SZI_(G),SZJ_(G)) :: &
@@ -167,7 +167,7 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
   logical :: use_drag_rate ! Flag to indicate drag_rate is finite
   integer :: i, j, k, is, ie, js, je, Isq, Ieq, Jsq, Jeq, nz
 
-  is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = G%ke
+  is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
   Isq = G%IscB ; Ieq = G%IecB ; Jsq = G%JscB ; Jeq = G%JecB
 
   if (.not.associated(CS)) call MOM_error(FATAL, &
@@ -912,7 +912,7 @@ subroutine MEKE_lengthScales_0d(CS, US, area, beta, depth, Rd_dx, SN, EKE, & ! Z
   type(MEKE_CS), pointer       :: CS         !< MEKE control structure.
   type(unit_scale_type), intent(in) :: US    !< A dimensional unit scaling type
   real,          intent(in)    :: area       !< Grid cell area [L2 ~> m2]
-  real,          intent(in)    :: beta       !< Planetary beta = |grad F| [T-1 L-1 ~> s-1 m-1]
+  real,          intent(in)    :: beta       !< Planetary beta = \f$ \nabla f\f$  [T-1 L-1 ~> s-1 m-1]
   real,          intent(in)    :: depth      !< Ocean depth [Z ~> m]
   real,          intent(in)    :: Rd_dx      !< Resolution Ld/dx [nondim].
   real,          intent(in)    :: SN         !< Eady growth rate [T-1 ~> s-1].
@@ -1007,7 +1007,8 @@ logical function MEKE_init(Time, G, US, param_file, diag, CS, MEKE, restart_CS)
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
 
   ! Determine whether this module will be used
-  call log_version(param_file, mdl, version, "")
+  call get_param(param_file, mdl, "USE_MEKE", MEKE_init, default=.false., do_not_log=.true.)
+  call log_version(param_file, mdl, version, "", all_default=.not.MEKE_init)
   call get_param(param_file, mdl, "USE_MEKE", MEKE_init, &
                  "If true, turns on the MEKE scheme which calculates "// &
                  "a sub-grid mesoscale eddy kinetic energy budget.", &
@@ -1457,7 +1458,7 @@ end subroutine MEKE_end
 !! \subsection section_MEKE_equations MEKE equations
 !!
 !! The eddy kinetic energy equation is:
-!! \f[ \partial_\tilde{t} E =
+!! \f[ \partial_{\tilde{t}} E =
 !!   \overbrace{ \dot{E}_b + \gamma_\eta \dot{E}_\eta + \gamma_v \dot{E}_v
 !!             }^\text{sources}
 !! - \overbrace{ ( \lambda + C_d | U_d | \gamma_b^2 ) E

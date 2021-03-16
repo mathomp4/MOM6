@@ -6,9 +6,10 @@ module MOM_ice_shelf_dynamics
 
 use MOM_cpu_clock, only : cpu_clock_id, cpu_clock_begin, cpu_clock_end
 use MOM_cpu_clock, only : CLOCK_COMPONENT, CLOCK_ROUTINE
-use MOM_diag_mediator, only : post_data, register_diag_field, safe_alloc_ptr
-use MOM_diag_mediator, only : diag_mediator_init, set_diag_mediator_grid
-use MOM_diag_mediator, only : diag_ctrl, time_type, enable_averages, disable_averaging
+use MOM_IS_diag_mediator, only : post_data=>post_IS_data
+use MOM_IS_diag_mediator, only : register_diag_field=>register_MOM_IS_diag_field, safe_alloc_ptr
+!use MOM_IS_diag_mediator, only : MOM_IS_diag_mediator_init, set_IS_diag_mediator_grid
+use MOM_IS_diag_mediator, only : diag_ctrl, time_type, enable_averages, disable_averaging
 use MOM_domains, only : MOM_domains_init, clone_MOM_domain
 use MOM_domains, only : pass_var, pass_vector, TO_ALL, CGRID_NE, BGRID_NE, CORNER
 use MOM_error_handler, only : MOM_error, MOM_mesg, FATAL, WARNING, is_root_pe
@@ -1405,6 +1406,7 @@ subroutine ice_shelf_advect_thickness_y(CS, G, LB, time_step, hmask, h0, h_after
   real :: h_face     ! Thickness at a face for transport [Z ~> m]
   real :: slope_lim  ! The value of the slope limiter, in the range of 0 to 2 [nondim]
 
+  ish = LB%ish ; ieh = LB%ieh ; jsh = LB%jsh ; jeh = LB%jeh
 
   ! hmask coded values: 1) fully covered; 2) partly covered - no export; 3) Specified boundary condition
   ! relevant u_face_mask coded values: 1) Normal interior point; 4) Specified flux BC
@@ -2787,9 +2789,9 @@ subroutine update_velocity_masks(CS, G, hmask, umask, vmask, u_face_mask, v_face
   u_face_mask(:,:) = 0 ; v_face_mask(:,:) = 0
 
   if (G%symmetric) then
-   is = isd ; js = jsd
+    is = isd ; js = jsd
   else
-   is = isd+1 ; js = jsd+1
+    is = isd+1 ; js = jsd+1
   endif
 
   do j=js,G%jed
